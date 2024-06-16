@@ -1,0 +1,115 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Swagger Audio Store API",
+    "description": "This is a rs-app product API\n",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://755vvfmegj.execute-api.eu-west-1.amazonaws.com/dev/",
+      "description": "API link"
+    }
+  ],
+  "paths": {
+    "/products": {
+      "get": {
+        "summary": "Get a list of all audio products",
+        "description": "Hardcoded backend values",
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Products"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status value"
+          }
+        }
+      }
+    },
+    "/products/{productId}": {
+      "get": {
+        "summary": "Finds Product by id",
+        "description": "Takes one product from hardcoded /products value",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "description": "Id to filter by",
+            "required": true,
+            "style": "simple",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid id"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Product": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "description": {
+            "type": "string",
+            "default": "Sample Description"
+          },
+          "id": {
+            "type": "string"
+          },
+          "price": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "title": {
+            "type": "string",
+            "description": "Product Title"
+          },
+          "image": {
+            "type": "string",
+            "description": "URL of image in jpeg format"
+          }
+        }
+      },
+      "Products": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/Product"
+        }
+      }
+    }
+  }
+}
