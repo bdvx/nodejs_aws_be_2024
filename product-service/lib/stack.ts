@@ -1,37 +1,34 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {
-  Function,
-  Runtime,
-  Code,
-} from "aws-cdk-lib/aws-lambda";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 import {
   LambdaIntegration,
   RestApi,
   Cors,
 } from "aws-cdk-lib/aws-apigateway";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const getProductsList = new Function(
+    const getProductsList = new NodejsFunction(
         this,
         "GetProductsListHandler",
         {
           runtime: Runtime.NODEJS_20_X,
-          code: Code.fromAsset('.'),
-          handler: "handler.getAllProducts",
+          entry: 'src/getAllProducts.ts',
+          handler: "handler",
         }
     );
 
-    const getProductById = new Function(
+    const getProductById = new NodejsFunction(
         this,
         "GetProductByIdHandler",
         {
           runtime: Runtime.NODEJS_20_X,
-          code: Code.fromAsset('.'),
-          handler: "handler.getProductById",
+          entry: 'src/getProductById.ts',
+          handler: "handler",
         }
     );
 
