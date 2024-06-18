@@ -1,8 +1,14 @@
 import productList from './productList';
 
-const headers = { "Access-Control-Allow-Origin": "*" };
+const headers = {
+  'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Credentials': true,
+    'Access-Control-Allow-Methods': '*',
+    'Content-Type': 'application/json'
+};
 
-export const getProductById = async (event: any) => {
+export const handler = async (event: any) => {
   console.log('getProductById lambda called with event: ', event);
   const { productId } = event.pathParameters;
   // emulate delay from remote URL fetch
@@ -19,7 +25,7 @@ export const getProductById = async (event: any) => {
     return {
       headers,
       statusCode: 404,
-      body: "Target product was not found",
+      body: JSON.stringify("Target product was not found"),
     };
   }
 

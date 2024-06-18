@@ -1,7 +1,7 @@
 import productList from './productList';
 
-export const getAllProducts = async (event: any) => {
-  console.log('getAllProducts lambda called with event: ', event);
+export const handler = async () => {
+  // console.log('getAllProducts lambda called with event: ', event);
 
   // emulate delay from remote URL fetch
   // suppose we'll get real URL here and not file with hardcoded values
