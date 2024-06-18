@@ -10,7 +10,7 @@ const headers = {
 
 export const handler = async (event: any) => {
   console.log('getProductById lambda called with event: ', event);
-  const { productId } = event.pathParameters;
+  const { id } = event.pathParameters;
   // emulate delay from remote URL fetch
   // suppose we'll get real URL here and not file with hardcoded values
   await new Promise(resolve => setTimeout(resolve, 1000));
@@ -19,7 +19,7 @@ export const handler = async (event: any) => {
   // try {
 
   // search needed product - by id field
-  const product = productList.find((prod) => prod.id === productId);
+  const product = productList.find((prod) => prod.id == id);
 
   if (!product){
     return {

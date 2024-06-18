@@ -11,6 +11,14 @@ const productList = [
     "image": URL
   },
   {
+    "count": 1,
+    "description": "Full-sized headphones 1",
+    "id": "1",
+    "price": 29990,
+    "title": "Sony WH-1000XM4 Black 1",
+    "image": URL
+  },
+  {
     "count": 6,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80a0",
