@@ -5,7 +5,7 @@ export const handler = async () => {
 
   // emulate delay from remote URL fetch
   // suppose we'll get real URL here and not file with hardcoded values
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
   // TODO:  Adding try/catch for error handling to uncomment in future tasks
   // try {

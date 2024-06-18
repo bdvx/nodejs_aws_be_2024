@@ -1,0 +1,113 @@
+openapi: 3.0.0
+info:
+  description: |
+    This is a rs-app product API
+  version: "1.0.0"
+  title: Swagger Audio Store API
+servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/bdvx/rs-app-aws-product-api/1.0.0
+  - description: API link
+    url: https://755vvfmegj.execute-api.eu-west-1.amazonaws.com/dev/
+paths:
+  /products:
+    get:
+      summary: Get a list of all audio products
+      description: DB values
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Products'
+        '400':
+          description: Invalid status value
+        '500':
+          description: Server Error
+    post:
+      summary: Create audio product
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+        - name: description
+          in: query
+          schema:
+            type: string
+        - name: price
+          in: query
+          schema: 
+            type: integer
+        - name: title
+          in: query
+          schema: 
+            type: string
+          description: Product Title
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Products'
+        '400':
+          description: Wrong parameters provided
+        '500':
+          description: Server Error
+  '/products/{productId}':
+    get:
+      summary: Finds Product by id
+      description: Takes one product from DB /products value
+      parameters:
+        - name: productId
+          in: path
+          description: Id to filter by
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid id
+        '500':
+          description: Server Error
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        description:
+          type: string
+          default: 'Sample Description'
+        id:
+          type: string
+        price:
+          type: integer
+          format: int32
+        title:
+          type: string
+          description: Product Title
+        image:
+          type: string
+          description: URL of image in jpeg format
+    Products:
+      type: array
+      items:
+        $ref: '#/components/schemas/Product'
