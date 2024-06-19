@@ -5,13 +5,10 @@ info:
   version: "1.0.0"
   title: Swagger Audio Store API
 servers:
-  # Added by API Auto Mocking Plugin
-  - description: SwaggerHub API Auto Mocking
-    url: https://virtserver.swaggerhub.com/bdvx/rs-app-aws-product-api/1.0.0
   - description: API link
-    url: https://755vvfmegj.execute-api.eu-west-1.amazonaws.com/dev/
+    url: https://5naewp4kya.execute-api.eu-west-1.amazonaws.com/prod
 paths:
-  /products:
+  '/products':
     get:
       summary: Get a list of all audio products
       description: DB values
@@ -21,46 +18,19 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Products'
+                $ref: '#/components/schemas/Products'
         '400':
-          description: Invalid status value
-        '500':
-          description: Server Error
-    post:
-      summary: Create audio product
-      parameters:
-        - name: count
-          in: query
-          schema:
-            type: integer
-        - name: description
-          in: query
-          schema:
-            type: string
-        - name: price
-          in: query
-          schema: 
-            type: integer
-        - name: title
-          in: query
-          schema: 
-            type: string
-          description: Product Title
-      responses:
-        '200':
-          description: successful operation
+          description: Invalid id
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Products'
-        '400':
-          description: Wrong parameters provided
+                $ref: '#/components/schemas/Error'
         '500':
           description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   '/products/{productId}':
     get:
       summary: Finds Product by id
@@ -78,13 +48,25 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Product'
+                $ref: '#/components/schemas/Product'
         '400':
           description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   schemas:
     Product:
@@ -111,3 +93,8 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/Product'
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
