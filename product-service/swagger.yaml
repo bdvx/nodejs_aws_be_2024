@@ -1,0 +1,100 @@
+openapi: 3.0.0
+info:
+  description: |
+    This is a rs-app product API
+  version: "1.0.0"
+  title: Swagger Audio Store API
+servers:
+  - description: API link
+    url: https://5naewp4kya.execute-api.eu-west-1.amazonaws.com/prod
+paths:
+  '/products':
+    get:
+      summary: Get a list of all audio products
+      description: DB values
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Products'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  '/products/{productId}':
+    get:
+      summary: Finds Product by id
+      description: Takes one product from DB /products value
+      parameters:
+        - name: productId
+          in: path
+          description: Id to filter by
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+        description:
+          type: string
+          default: 'Sample Description'
+        id:
+          type: string
+        price:
+          type: integer
+          format: int32
+        title:
+          type: string
+          description: Product Title
+        image:
+          type: string
+          description: URL of image in jpeg format
+    Products:
+      type: array
+      items:
+        $ref: '#/components/schemas/Product'
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
