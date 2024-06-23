@@ -7,6 +7,7 @@ import {
   Cors,
 } from "aws-cdk-lib/aws-apigateway";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -14,7 +15,7 @@ export class CdkStack extends cdk.Stack {
 
     const getProductsList = new NodejsFunction(
         this,
-        "GetProductsListHandler",
+        'GetProductsListHandler',
         {
           runtime: Runtime.NODEJS_20_X,
           entry: 'src/getAllProducts.ts',
@@ -24,13 +25,60 @@ export class CdkStack extends cdk.Stack {
 
     const getProductById = new NodejsFunction(
         this,
-        "GetProductByIdHandler",
+        'GetProductByIdHandler',
         {
           runtime: Runtime.NODEJS_20_X,
           entry: 'src/getProductById.ts',
           handler: "handler",
         }
     );
+
+    const createProduct = new NodejsFunction(
+        this, 
+        'CreateProduct', 
+        {
+          runtime: Runtime.NODEJS_20_X,
+          entry: 'src/createProduct.ts',
+          handler: "handler",
+        }
+    );
+
+    // TABLES
+
+    const productTable = new dynamodb.Table(this, 'ProductTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: 'products',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const countTable = new dynamodb.Table(this, 'StockTable', {
+      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
+      tableName: 'stocks',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    productTable.grantReadData(getProductsList);
+    productTable.grantReadData(getProductById);
+    productTable.grantWriteData(createProduct);
+
+    countTable.grantReadData(getProductsList);
+    countTable.grantReadData(getProductById);
+    countTable.grantWriteData(createProduct);
+
+    [getProductsList, getProductById, createProduct].forEach((fn) => {
+        const envs = [
+          {key: 'DYNAMODB_PRODUCTS_TABLE', value: productTable.tableName},
+          {key: 'DYNAMODB_STOCKS_TABLE', value: countTable.tableName},
+          {key: 'UI_URL', value: Config.UI_URL},
+        ]
+
+        for (const {key, value} of envs) {
+          fn.addEnvironment(key, value);
+        }
+      }
+    );
+
+    // API
 
     const api = new RestApi(this, "ProductService", {
       restApiName: "ProductService",

@@ -1,9 +1,10 @@
 // mocked image
 const URL = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=1950&q=80";
+import { Product } from "../types/product.type";
 
-const productList = [
+// @ts-ignore
+const productList: Product = [
   {
-    "count": 4,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80aa",
     "price": 29990,
@@ -11,7 +12,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 1,
     "description": "Full-sized headphones 1",
     "id": "1",
     "price": 29990,
@@ -19,7 +19,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 6,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80a0",
     "price": 29990,
@@ -27,7 +26,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 7,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80a2",
     "price": 26990,
@@ -35,7 +33,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 12,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80a1",
     "price": 159990,
@@ -43,7 +40,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 7,
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80a2",
     "price": 14990,
@@ -51,7 +47,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 8,
     "description": "True wireless earphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73348a80a1",
     "price": 14990,
@@ -59,7 +54,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 2,
     "description": "True wireless earphones",
     "id": "7567ec4b-b10c-48c5-9445-fc73c48a80a2",
     "price": 22890,
@@ -67,7 +61,6 @@ const productList = [
     "image": URL
   },
   {
-    "count": 3,
     "description": "True wireless earphones",
     "id": "7567ec4b-b10c-45c5-9345-fc73c48a80a1",
     "price": 12790,
