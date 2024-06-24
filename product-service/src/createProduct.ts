@@ -3,7 +3,7 @@ import { DynamoDBDocumentClient, TransactWriteCommand } from "@aws-sdk/lib-dynam
 import { CreateProduct } from "../types/createProduct.type";
 import { randomUUID } from "crypto";
 
-const RESPONSE_HEADERS = {
+const headers = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
 };
@@ -47,9 +47,14 @@ const parseRequestBody = (body: string | null): Record<string, any> => {
 * @param data - The request data.
 * @returns True if the request data is valid, otherwise false.
 */
-const isRequestDataValid = (data: any): data is CreateProduct => {
-  return data !== undefined
-}
+const isRequestDataValid = (title: any, description: any, price: any, count: any): boolean => {
+  return (
+      typeof title === 'string' &&
+      typeof description === 'string' &&
+      typeof price === 'number' &&
+      typeof count === 'number'
+  );
+};
 
 /**
  * Saves the product data to DynamoDB.
@@ -64,14 +69,14 @@ const saveProductToDynamoDB = async (productId: string, title: string, descripti
     TransactItems: [
       {
         Put: {
-          TableName: process.env.DB_PRODUCTS,
+          TableName: process.env.PRODUCTS_TABLE_NAME,
           Item: { id: productId, title, description, price },
         },
       },
       {
         Put: {
-          TableName: process.env.DB_STOCK,
-          Item: { product_id: productId, count },
+          TableName: process.env.COUNT_TABLE_NAME,
+          Item: { id: productId, count },
         },
       },
     ],
@@ -89,7 +94,7 @@ const saveProductToDynamoDB = async (productId: string, title: string, descripti
 const createSuccessResponse = (statusCode: number, message: string) => {
   return {
     statusCode,
-    headers: RESPONSE_HEADERS,
+    headers,
     body: JSON.stringify(message),
   };
 };
@@ -103,7 +108,7 @@ const createSuccessResponse = (statusCode: number, message: string) => {
 const createErrorResponse = (statusCode: number, message: string) => {
   return {
     statusCode,
-    headers: RESPONSE_HEADERS,
+    headers,
     body: JSON.stringify({ error: message }),
   };
 };

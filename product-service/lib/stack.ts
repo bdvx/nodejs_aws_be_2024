@@ -115,11 +115,11 @@ export class CdkStack extends cdk.Stack {
     const productsPath = api.root.addResource("products");
 
     productsPath.addMethod("GET", new LambdaIntegration(getProductsList));
+    
+    productsPath.addMethod("POST", new LambdaIntegration(createProduct));
 
     const productByIdPath = productsPath.addResource("{id}");
 
     productByIdPath.addMethod("GET", new LambdaIntegration(getProductById));
-    
-    productByIdPath.addMethod("POST", new LambdaIntegration(createProduct));
   }
 }

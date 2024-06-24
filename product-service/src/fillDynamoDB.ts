@@ -3,9 +3,11 @@ import { DynamoDBDocumentClient, BatchWriteCommand } from "@aws-sdk/lib-dynamodb
 import productList from './productList';
 import { ProductCount } from "../types/productCount.type";
 import { Product } from "../types/product.type";
+import { randomUUID } from "crypto";
 
 const client = new DynamoDBClient({});
 const documentClient = DynamoDBDocumentClient.from(client);
+const ids = Array(productList.length).fill(0).map(() => randomUUID())
 
 /**
  * Handler function for AWS Lambda.
@@ -31,8 +33,8 @@ const fillTableWithProducts = async () => {
 
   const productWriteCommand = new BatchWriteCommand({
     RequestItems: {
-      [productsTableName]: productList.map((item) => ({
-        PutRequest: { Item: item },
+      [productsTableName]: productList.map((item, i) => ({
+        PutRequest: { Item: {...item, id: ids[i] } },
       })),
     },
   });
@@ -66,8 +68,8 @@ const fillTableWithStocks = async () => {
  * @returns An array of ProductCount objects.
  */
 const generateProductCounts = (products: Product[]): ProductCount[] => {
-  return products.map(({ id }) => ({
-    id,
+  return products.map((_, i) => ({
+    id: ids[i],
     count: Math.floor(Math.random() * 100),
   } as ProductCount));
 };
