@@ -14,6 +14,7 @@ const ids = Array(productList.length).fill(0).map(() => randomUUID())
  * @param event - The event data.
  */
 export const handler = async (event: any) => {
+  console.log('fillDynamoDB lambda called to initially fill DB');
   try {
     await fillTableWithProducts();
     await fillTableWithStocks();

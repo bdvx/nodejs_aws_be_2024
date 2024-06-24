@@ -18,7 +18,7 @@ export const handler = async (event: any) => {
     const requestBody = parseRequestBody(event.body);
     const { title, description, price, count } = requestBody;
 
-    if (!isRequestDataValid({title, description, price, count})) {
+    if (!isRequestDataValid(title, description, price, count)) {
       return createErrorResponse(400, 'Validation Error: request should contain title, description as STRING and price, count as NUMBER');
     }
 
