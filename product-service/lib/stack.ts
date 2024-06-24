@@ -57,14 +57,6 @@ export class CdkStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    productTable.grantReadData(getProductsList);
-    productTable.grantReadData(getProductById);
-    productTable.grantWriteData(createProduct);
-
-    countTable.grantReadData(getProductsList);
-    countTable.grantReadData(getProductById);
-    countTable.grantWriteData(createProduct);
-
     [getProductsList, getProductById, createProduct].forEach((fn) => {
         const envs = [
           {key: 'DYNAMODB_PRODUCTS_TABLE', value: productTable.tableName},
@@ -77,6 +69,12 @@ export class CdkStack extends cdk.Stack {
         }
       }
     );
+
+    [productTable, countTable].forEach((fn) => {
+      fn.grantReadData(getProductsList);
+      fn.grantReadData(getProductById);
+      fn.grantWriteData(createProduct);
+    })
 
     // API
 
@@ -95,5 +93,7 @@ export class CdkStack extends cdk.Stack {
     const productByIdPath = productsPath.addResource("{id}");
 
     productByIdPath.addMethod("GET", new LambdaIntegration(getProductById));
+    
+    productByIdPath.addMethod("POST", new LambdaIntegration(createProduct));
   }
 }

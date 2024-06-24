@@ -3,7 +3,7 @@ const URL = "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?ixlib=
 import { Product } from "../types/product.type";
 
 // @ts-ignore
-const productList: Product = [
+const productList: Product[] = [
   {
     "description": "Full-sized headphones",
     "id": "7567ec4b-b10c-48c5-9345-fc73c48a80aa",
