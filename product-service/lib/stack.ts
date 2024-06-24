@@ -13,6 +13,22 @@ export class CdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // TABLES
+
+    const productTable = new dynamodb.Table(this, 'ProductTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: process.env.PRODUCTS_TABLE_NAME,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    const countTable = new dynamodb.Table(this, 'StockTable', {
+      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
+      tableName: process.env.COUNT_TABLE_NAME,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // LAMBDAS
+
     const getProductsList = new NodejsFunction(
         this,
         'GetProductsListHandler',
@@ -20,6 +36,10 @@ export class CdkStack extends cdk.Stack {
           runtime: Runtime.NODEJS_20_X,
           entry: 'src/getAllProducts.ts',
           handler: "handler",
+          environment: {
+            PRODUCTS_TABLE_NAME: productTable.tableName,
+            COUNT_TABLE_NAME: countTable.tableName,
+          }
         }
     );
 
@@ -30,6 +50,10 @@ export class CdkStack extends cdk.Stack {
           runtime: Runtime.NODEJS_20_X,
           entry: 'src/getProductById.ts',
           handler: "handler",
+          environment: {
+            PRODUCTS_TABLE_NAME: productTable.tableName,
+            COUNT_TABLE_NAME: countTable.tableName,
+          }
         }
     );
 
@@ -40,28 +64,29 @@ export class CdkStack extends cdk.Stack {
           runtime: Runtime.NODEJS_20_X,
           entry: 'src/createProduct.ts',
           handler: "handler",
+          environment: {
+            PRODUCTS_TABLE_NAME: productTable.tableName,
+            COUNT_TABLE_NAME: countTable.tableName,
+          }
         }
     );
 
-    // TABLES
-
-    const productTable = new dynamodb.Table(this, 'ProductTable', {
-      partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
-      tableName: 'products',
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
-
-    const countTable = new dynamodb.Table(this, 'StockTable', {
-      partitionKey: { name: 'product_id', type: dynamodb.AttributeType.STRING },
-      tableName: 'stocks',
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-    });
+    const fillDynamoDBLambda = new NodejsFunction(
+      this,
+      "FillDynamoDBLambda", {
+        runtime: Runtime.NODEJS_20_X,
+        entry: 'src/fillDynamoDB.ts',
+        handler: 'handler',
+        environment: {
+          PRODUCTS_TABLE_NAME: productTable.tableName,
+          COUNT_TABLE_NAME: countTable.tableName,
+        }
+      });
 
     [getProductsList, getProductById, createProduct].forEach((fn) => {
         const envs = [
-          {key: 'DYNAMODB_PRODUCTS_TABLE', value: productTable.tableName},
-          {key: 'DYNAMODB_STOCKS_TABLE', value: countTable.tableName},
-          {key: 'UI_URL', value: Config.UI_URL},
+          {key: 'PRODUCTS_TABLE_NAME', value: productTable.tableName},
+          {key: 'COUNT_TABLE_NAME', value: countTable.tableName}
         ]
 
         for (const {key, value} of envs) {
@@ -70,10 +95,11 @@ export class CdkStack extends cdk.Stack {
       }
     );
 
-    [productTable, countTable].forEach((fn) => {
-      fn.grantReadData(getProductsList);
-      fn.grantReadData(getProductById);
-      fn.grantWriteData(createProduct);
+    [productTable, countTable].forEach((table) => {
+      table.grantReadData(getProductsList);
+      table.grantReadData(getProductById);
+      table.grantReadWriteData(createProduct);
+      table.grantReadWriteData(fillDynamoDBLambda)
     })
 
     // API

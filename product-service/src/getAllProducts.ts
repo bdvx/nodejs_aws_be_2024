@@ -7,7 +7,7 @@ const dynamoDbDocumentClient = DynamoDBDocumentClient.from(dynamoDbClient);
 export const handler = async (event: any) => {
   console.log('getAllProducts lambda called with event:', event);
 
-  const responseHeaders = {
+  const responseHeaders: Record<string, any> = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': '*',
     'Access-Control-Allow-Credentials': true,
@@ -56,10 +56,10 @@ const fetchTableData = async (tableName: string) => {
  * @param stocks - The stock data.
  * @returns The combined product and stock data.
  */
-const combineProductData = (products: any[], stocks: any[]) => {
+const combineProductData = (products: any[], stocks: Record<string, any> | undefined) => {
   return products.map((product) => ({
     ...product,
-    count: stocks.find(({ product_id }) => product_id === product.id)?.count,
+    count: stocks?.find((p: any) => p.id === product.id)?.count,
   }));
 };
 

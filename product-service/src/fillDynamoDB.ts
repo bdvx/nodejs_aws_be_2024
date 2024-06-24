@@ -69,5 +69,5 @@ const generateProductCounts = (products: Product[]): ProductCount[] => {
   return products.map(({ id }) => ({
     id,
     count: Math.floor(Math.random() * 100),
-  }));
+  } as ProductCount));
 };
