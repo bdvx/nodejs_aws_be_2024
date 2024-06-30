@@ -21,13 +21,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }
 
         const command = new PutObjectCommand({
-            Bucket: process.env.BUCKET!,
+            Bucket: process.env.BUCKET_NAME!,
             Key: `uploaded/${name}`,
             ContentType: 'text/csv',
         });
 
         const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-
+        console.log({signedUrl})
         return {
             statusCode: 200,
             headers,

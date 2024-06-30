@@ -31,7 +31,7 @@ export class CdkStack extends Stack {
 
     // Create S3 Bucket
     const importBucket = new Bucket(this, "ImportBucket", {
-      bucketName: 'import-service-bucket',
+      bucketName: 'rs-school-aws-import-service-bucket',
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       cors: [
         {

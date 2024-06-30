@@ -10,7 +10,8 @@ export const handler = async (event: any) => {
 
   try {
     for (const s3Record of event.Records) {
-      const bucketName = s3Record.s3.bucket.name;
+      const bucketName = process.env.BUCKET_NAME;
+      console.log('s3Record:', s3Record);
       const key = decodeURIComponent(s3Record.s3.object.key.replace(/\+/g, ' '));
 
       console.log('Processing S3 record', { bucketName, key });
@@ -29,7 +30,7 @@ export const handler = async (event: any) => {
       await new Promise<void>((resolve, reject) => {
         data.pipe(new PassThrough())
             .pipe(csv())
-            .on('data', (row) => console.log('CSV row:', row)) // Logging each CSV row (can be replaced with actual processing logic)
+            .on('data', console.log)
             .on('error', reject)
             .on('end', async () => {
               // Prepare parameters for copying and deleting objects in S3
