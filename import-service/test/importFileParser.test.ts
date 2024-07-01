@@ -1,27 +1,27 @@
 import { handler } from '../src/importFileParser';
 import { Readable } from 'stream';
-import { GetObjectCommand, CopyObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-
 
 jest.mock('@aws-sdk/client-s3', () => {
+  const s3client = jest.requireActual('@aws-sdk/client-s3');
+  const {S3Client, GetObjectCommand, CopyObjectCommand, DeleteObjectCommand} = s3client
+  class S3ClientMock extends S3Client {
+    send(command: any) {
+      if (command instanceof CopyObjectCommand || command instanceof DeleteObjectCommand) {
+        return Promise.resolve();
+      } else if (command instanceof GetObjectCommand) {
+        const data = new Readable();
+        data.push('test');
+        data.push(null);
+        return Promise.resolve({ Body: data });
+      } else return Promise.reject();
+    }
+  }
+
   return {
-      ...jest.requireActual('@aws-sdk/client-s3'),
-      SQSClient: function send(command: any): Promise<void | { Body: Readable; }> {
-          if (command instanceof GetObjectCommand) {
-            const mockData = new Readable();
-            mockData.push('test');
-            mockData.push(null);
-            return Promise.resolve({ Body: mockData });
-          } else if (command instanceof CopyObjectCommand || command instanceof DeleteObjectCommand) {
-            return Promise.resolve();
-          } else return Promise.reject();
-      },
+    ...s3client,
+    S3Client: S3ClientMock,
   };
 });
-
-jest.mock('csv-parser');
-//jest.mock('csv');
-
 describe('importFileParser handler', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -42,10 +42,6 @@ describe('importFileParser handler', () => {
         },
       ],
     };
-
-    const mockData = new Readable();
-    mockData.push('test');
-    mockData.push(null);
 
     const result = await handler(mockEvent);
 
