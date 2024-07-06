@@ -83,6 +83,18 @@ export class CdkStack extends cdk.Stack {
         }
       });
 
+    const catalogBatchProcess = new NodejsFunction(
+      this,
+      "CatalogBatchProcess", {
+        runtime: Runtime.NODEJS_20_X,
+        entry: 'src/catalogBatchProcess.ts',
+        handler: 'handler',
+        environment: {
+          PRODUCTS_TABLE_NAME: productTable.tableName,
+          COUNT_TABLE_NAME: countTable.tableName,
+        }
+      });
+
     [getProductsList, getProductById, createProduct].forEach((fn) => {
         const envs = [
           {key: 'PRODUCTS_TABLE_NAME', value: productTable.tableName},
