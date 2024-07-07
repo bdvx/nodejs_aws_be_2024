@@ -1,4 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
+import { aws_sqs as sqs, aws_sns as sns, aws_sns_subscriptions as subscriptions } from 'aws-cdk-lib';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Construct } from 'constructs';
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import {
@@ -113,6 +115,40 @@ export class CdkStack extends cdk.Stack {
       table.grantReadWriteData(createProduct);
       table.grantReadWriteData(fillDynamoDBLambda)
     })
+
+    // Create SQS queue
+    const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue', {
+      visibilityTimeout: cdk.Duration.seconds(300),
+    });
+
+    // Grant the Lambda function permissions to write to the DynamoDB table
+    productTable.grantWriteData(catalogBatchProcess);
+
+    // Configure SQS event source for the Lambda function with batch size
+    const eventSource = new SqsEventSource(catalogItemsQueue, {
+      batchSize: 5,
+    });
+    catalogBatchProcess.addEventSource(eventSource);
+
+    // Create SNS topic
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
+
+    // Create primary email subscription without filter policy
+    createProductTopic.addSubscription(new subscriptions.EmailSubscription('primary-email@example.com'));
+
+    // Create secondary email subscription with filter policy for high-priced products
+    createProductTopic.addSubscription(
+        new subscriptions.EmailSubscription('high-price-email@example.com', {
+          filterPolicy: {
+            price: sns.SubscriptionFilter.numericFilter({
+              greaterThan: 100,
+            }),
+          },
+        })
+    );
+
+    // Grant the Lambda function permissions to publish to the SNS topic
+    createProductTopic.grantPublish(catalogBatchProcess);
 
     // API
 
