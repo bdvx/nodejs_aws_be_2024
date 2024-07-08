@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_sqs as sqs, aws_sns as sns, aws_sns_subscriptions as subscriptions } from 'aws-cdk-lib';
+import { aws_sqs as sqs, aws_sns as sns, aws_sns_subscriptions as subscriptions, CfnOutput } from 'aws-cdk-lib';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { Construct } from 'constructs';
 import { Runtime } from "aws-cdk-lib/aws-lambda";
@@ -12,6 +12,7 @@ import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 
 export class CdkStack extends cdk.Stack {
+  public readonly queueUrl: string;
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -28,6 +29,23 @@ export class CdkStack extends cdk.Stack {
       tableName: process.env.COUNT_TABLE_NAME,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
+
+    // Create SNS topic
+    const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
+
+    // Create primary email subscription without filter policy
+    createProductTopic.addSubscription(new subscriptions.EmailSubscription('bdv2507@gmail.com'));
+
+    // Create secondary email subscription with filter policy for high-priced products
+    createProductTopic.addSubscription(
+        new subscriptions.EmailSubscription('bdv2507@yandex.ru', {
+          filterPolicy: {
+            price: sns.SubscriptionFilter.numericFilter({
+              greaterThan: 100,
+            }),
+          },
+        })
+    );
 
     // LAMBDAS
 
@@ -94,6 +112,7 @@ export class CdkStack extends cdk.Stack {
         environment: {
           PRODUCTS_TABLE_NAME: productTable.tableName,
           COUNT_TABLE_NAME: countTable.tableName,
+          SNS_TOPIC_ARN: createProductTopic.topicArn,
         }
       });
 
@@ -114,12 +133,16 @@ export class CdkStack extends cdk.Stack {
       table.grantReadData(getProductById);
       table.grantReadWriteData(createProduct);
       table.grantReadWriteData(fillDynamoDBLambda)
+      table.grantReadWriteData(catalogBatchProcess)
     })
 
     // Create SQS queue
     const catalogItemsQueue = new sqs.Queue(this, 'CatalogItemsQueue', {
-      visibilityTimeout: cdk.Duration.seconds(300),
+      visibilityTimeout: cdk.Duration.seconds(30),
     });
+
+    new CfnOutput(this, "CatalogQueueUrlOutput", { value: catalogItemsQueue.queueUrl, exportName: "CatalogQueueUrl" })
+    new CfnOutput(this, "CatalogQueueArnOutput", { value: catalogItemsQueue.queueArn, exportName: "CatalogQueueArn" })
 
     // Grant the Lambda function permissions to write to the DynamoDB table
     productTable.grantWriteData(catalogBatchProcess);
@@ -130,22 +153,6 @@ export class CdkStack extends cdk.Stack {
     });
     catalogBatchProcess.addEventSource(eventSource);
 
-    // Create SNS topic
-    const createProductTopic = new sns.Topic(this, 'CreateProductTopic');
-
-    // Create primary email subscription without filter policy
-    createProductTopic.addSubscription(new subscriptions.EmailSubscription('primary-email@example.com'));
-
-    // Create secondary email subscription with filter policy for high-priced products
-    createProductTopic.addSubscription(
-        new subscriptions.EmailSubscription('high-price-email@example.com', {
-          filterPolicy: {
-            price: sns.SubscriptionFilter.numericFilter({
-              greaterThan: 100,
-            }),
-          },
-        })
-    );
 
     // Grant the Lambda function permissions to publish to the SNS topic
     createProductTopic.grantPublish(catalogBatchProcess);

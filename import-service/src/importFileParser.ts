@@ -36,12 +36,14 @@ export const handler = async (event: any) => {
         .pipe(csv())
         .on('data', async (record) => {
           try {
+            console.log('Sending message to SQS:', record, queueUrl);
             const sendMessageParams = {
               QueueUrl: queueUrl,
               MessageBody: JSON.stringify(record),
             };
 
-            await sqsClient.send(new SendMessageCommand(sendMessageParams));
+            const sentMessage = await sqsClient.send(new SendMessageCommand(sendMessageParams));
+            console.log('Sent message to SQS:',sentMessage);
           } catch (error) {
             console.error('Error sending message to SQS:', error);
             reject(error);

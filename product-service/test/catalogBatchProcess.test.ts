@@ -1,122 +1,88 @@
-import { DynamoDBClient, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
-import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { SNSClient } from '@aws-sdk/client-sns';
 
 jest.mock('@aws-sdk/client-dynamodb');
 jest.mock('@aws-sdk/client-sns');
 
 import { handler } from '../src/catalogBatchProcess';
 
+jest.mock('@aws-sdk/client-dynamodb');
+jest.mock('@aws-sdk/client-sns');
+
 const dynamodbMock = DynamoDBClient.prototype.send as jest.Mock;
 const snsMock = SNSClient.prototype.send as jest.Mock;
 
-describe('catalogBatchProcess Lambda Function', () => {
-  const tableName = 'ProductsTable';
-  const snsTopicArn = 'arn:aws:sns:us-east-1:123456789012:CreateProductTopic';
+describe('catalogBatchProcess', () => {
+  const productsTableName = 'ProductsTable';
+  const stocksTableName = 'StocksTable';
+  const createProductTopicArn = 'arn:aws:sns:region:account:createProductTopic';
 
   beforeEach(() => {
-    process.env.TABLE_NAME = tableName;
-    process.env.SNS_TOPIC_ARN = snsTopicArn;
+    process.env.PRODUCTS_TABLE_NAME = productsTableName;
+    process.env.STOCKS_TABLE_NAME = stocksTableName;
+    process.env.CREATE_PRODUCT_TOPIC_ARN = createProductTopicArn;
+
+    dynamodbMock.mockReset();
+    snsMock.mockReset();
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
+  it('should process SQS messages and create products with SNS notification', async () => {
+    const productId = 'test-product-id';
 
-  it('should process SQS messages and write to DynamoDB', async () => {
+    dynamodbMock.mockResolvedValue({});
+    snsMock.mockResolvedValue({});
+
     const event = {
       Records: [
         {
-          body: JSON.stringify({ id: '1', name: 'Product 1', price: 100 }),
+          body: JSON.stringify({ title: 'Product 1', description: 'Description 1', price: 100, count: 10 }),
         },
         {
-          body: JSON.stringify({ id: '2', name: 'Product 2', price: 200 }),
+          body: JSON.stringify({ title: 'Product 2', description: 'Description 2', price: 200, count: 20 }),
         },
       ],
     };
 
-    dynamodbMock.mockResolvedValue({});
-
-    snsMock.mockResolvedValue({});
-
     // @ts-ignore
-    await handler(event as any);
+    const {statusCode, body} = await handler(event);
 
-    expect(dynamodbMock).toHaveBeenCalledWith(
-        expect.any(BatchWriteItemCommand)
-    );
-
-    expect(snsMock).toHaveBeenCalledWith(
-        expect.any(PublishCommand)
-    );
-
-    const sentDynamoDBCommands = dynamodbMock.mock.calls[0][0] as BatchWriteItemCommand;
-    const items = sentDynamoDBCommands.input.RequestItems![tableName];
-
-    expect(items).toEqual([
-      {
-        PutRequest: {
-          Item: {
-            id: { S: '1' },
-            name: { S: 'Product 1' },
-            price: { N: '100' },
-          },
-        },
-      },
-      {
-        PutRequest: {
-          Item: {
-            id: { S: '2' },
-            name: { S: 'Product 2' },
-            price: { N: '200' },
-          },
-        },
-      },
+    expect(statusCode).toBe(200);
+    const results = JSON.parse(body);
+    expect(results).toEqual([
+      { status: 'Success', id: productId },
+      { status: 'Success', id: productId },
     ]);
 
-    const sentSnsCommand = snsMock.mock.calls[0][0] as PublishCommand;
-
-    expect(sentSnsCommand.input.TopicArn).toBe(snsTopicArn);
-    expect(sentSnsCommand.input.Message).toContain('Products have been created successfully');
-    expect(sentSnsCommand.input.Message).toContain('"id":{"S":"1"}');
-    expect(sentSnsCommand.input.Message).toContain('"id":{"S":"2"}');
+    expect(dynamodbMock).toHaveBeenCalledTimes(2);
+    expect(snsMock).toHaveBeenCalledTimes(2);
   });
 
-  it('should handle DynamoDB errors gracefully', async () => {
-    const event = {
-      Records: [
-        {
-          body: JSON.stringify({ id: '1', name: 'Product 1', price: 100 }),
-        },
-      ],
-    };
+  it('should handle errors during product creation and SNS notification', async () => {
+    const productId = 'test-product-id';
 
     dynamodbMock.mockRejectedValue(new Error('DynamoDB error'));
-
     snsMock.mockResolvedValue({});
 
-    // @ts-ignore
-    await handler(event as any);
-
-    expect(dynamodbMock).toHaveBeenCalled();
-    expect(snsMock).not.toHaveBeenCalled();
-  });
-
-  it('should handle SNS errors gracefully', async () => {
     const event = {
       Records: [
         {
-          body: JSON.stringify({ id: '1', name: 'Product 1', price: 100 }),
+          body: JSON.stringify({ title: 'Product 1', description: 'Description 1', price: 100, count: 10 }),
         },
       ],
     };
 
-    dynamodbMock.mockResolvedValue({});
-    snsMock.mockRejectedValue(new Error('SNS error'));
-
+    const response = await handler(event);
+    
     // @ts-ignore
-    await handler(event as any);
+    const {statusCode, body} = await handler(event);
+    
+    expect(statusCode).toBe(200);
+    const results = JSON.parse(body);
+    expect(results).toEqual([
+      { status: 'Error', error: 'DynamoDB error' },
+    ]);
 
-    expect(dynamodbMock).toHaveBeenCalled();
-    expect(snsMock).toHaveBeenCalled();
+    expect(dynamodbMock).toHaveBeenCalledTimes(1);
+    expect(snsMock).not.toHaveBeenCalled();
   });
 });

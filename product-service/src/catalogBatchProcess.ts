@@ -1,70 +1,71 @@
-import { DynamoDBClient, BatchWriteItemCommand, BatchWriteItemCommandInput } from "@aws-sdk/client-dynamodb";
-import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
-import { SQSHandler } from "aws-lambda";
+import { DynamoDBClient, TransactWriteItemsCommand } from '@aws-sdk/client-dynamodb';
+import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
+import { randomUUID } from "crypto";
 
 const dynamodb = new DynamoDBClient({});
-const snsClient = new SNSClient({});
+const sns = new SNSClient({ region: 'eu-west-1' });
+const productsTableName = process.env.PRODUCTS_TABLE_NAME;
+const stocksTableName = process.env.COUNT_TABLE_NAME;
+const createProductTopicArn = process.env.SNS_TOPIC_ARN;
 
-export const handler: SQSHandler = async (event: any) => {
-  const tableName = process.env.TABLE_NAME;
-  const snsTopicArn = process.env.SNS_TOPIC_ARN;
-
-  if (!tableName) {
-    throw new Error("TABLE_NAME environment variable is not set");
+export const handler = async (event: any) => {
+  if (!productsTableName || !stocksTableName || !createProductTopicArn) {
+    console.error('Table names or SNS topic ARN not provided');
+    return;
   }
 
-  if (!snsTopicArn) {
-    throw new Error("SNS_TOPIC_ARN environment variable is not set");
-  }
+  const results = [];
 
-  const putRequests = event.Records.map((record: { body: string; }) => {
-    const body = JSON.parse(record.body);
+  for (const record of event.Records) {
+    const { title, description, price, count } = JSON.parse(record.body);
+    const productId = randomUUID();
 
-    return {
-      PutRequest: {
-        Item: {
-          id: { S: body.id },
-          name: { S: body.name },
-          price: { N: body.price.toString() },
-          // Add other fields as necessary
-        }
-      }
-    };
-  });
-
-  const params: BatchWriteItemCommandInput = {
-    RequestItems: {
-      [tableName]: putRequests,
-    }
-  };
-
-  try {
-    const command = new BatchWriteItemCommand(params);
-    await dynamodb.send(command);
-    console.log('Batch write successful');
-
-    // Publish to SNS topic
-    const publishParams = {
-      TopicArn: snsTopicArn,
-      Message: JSON.stringify({
-        message: 'Products have been created successfully',
-        products: putRequests.map((req: { PutRequest: { Item: { id: { S: any; }; name: { S: any; }; price: { N: any; }; }; }; }) => ({
-          id: req.PutRequest.Item.id.S,
-          name: req.PutRequest.Item.name.S,
-          price: Number(req.PutRequest.Item.price.N),
-        }))
-      }),
-      Subject: 'Products Created',
-      MessageAttributes: {
-        price: {
-          DataType: 'Number',
-          StringValue: putRequests[0].PutRequest.Item.price.N,
-        },
+    const productParams = {
+      TableName: productsTableName,
+      Item: {
+        id: { S: productId },
+        title: { S: title },
+        description: { S: description },
+        price: { N: String(price) },
       },
     };
-    await snsClient.send(new PublishCommand(publishParams));
-    console.log('SNS publish successful');
-  } catch (error) {
-    console.error('Error processing batch', error);
+
+    const stockParams = {
+      TableName: stocksTableName,
+      Item: {
+        id: { S: productId },
+        count: { N: String(count) },
+      },
+    };
+
+    const transactItems = {
+      TransactItems: [
+        { Put: productParams },
+        { Put: stockParams },
+      ],
+    };
+
+    try {
+      await dynamodb.send(new TransactWriteItemsCommand(transactItems));
+      console.info('Table filled, message sending:', createProductTopicArn);
+      const message = {
+        Subject: 'New product created',
+        Message: JSON.stringify({ id: productId, title, description, price, count }),
+        TopicArn: createProductTopicArn,
+      };
+
+      const sentMessage = await sns.send(new PublishCommand(message));
+      console.info('Message sent:', sentMessage);
+      results.push({ status: 'Success', id: productId });
+    } catch (error) {
+      console.error('Error creating product or sending SNS message', error);
+      // @ts-ignore
+      results.push({ status: 'Error', error: error.message });
+    }
   }
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify(results),
+  };
 };
