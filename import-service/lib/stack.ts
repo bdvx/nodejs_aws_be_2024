@@ -2,11 +2,13 @@ import { Fn, Stack, StackProps } from 'aws-cdk-lib';
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Queue } from "aws-cdk-lib/aws-sqs";
 import { Construct } from 'constructs';
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, Function } from "aws-cdk-lib/aws-lambda";
 import {
   LambdaIntegration,
   RestApi,
   Cors,
+  TokenAuthorizer,
+  AuthorizationType
 } from "aws-cdk-lib/aws-apigateway";
 import {
   PolicyStatement,
@@ -94,11 +96,20 @@ export class CdkStack extends Stack {
       },
     });
 
+    const authorizerLambdaArn = Fn.importValue('BasicAuthorizerArn'); // Import the ARN from the Authorization service
+
+    // Define authorizer
+    const authorizer = new TokenAuthorizer(this, 'Authorizer', {
+      handler: Function.fromFunctionArn(this, 'basicAuthorizer', authorizerLambdaArn),
+      identitySource: 'method.request.header.Authorization',
+    });
 
     // Define import resource and its methods
     const importResource = api.root.addResource('import');
-    importResource.addMethod('GET', new LambdaIntegration(importProductsLambda));
-
+    importResource.addMethod('GET', new LambdaIntegration(importProductsLambda), {
+      authorizer,
+      authorizationType: AuthorizationType.CUSTOM,
+    });
     // S3 event notification for new object creation
     importBucket.addEventNotification(
       EventType.OBJECT_CREATED,
