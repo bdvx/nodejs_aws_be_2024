@@ -1,11 +1,8 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
+import { Fn, Stack, StackProps } from 'aws-cdk-lib';
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { Queue } from "aws-cdk-lib/aws-sqs";
 import { Construct } from 'constructs';
-import {
-  Function,
-  Runtime,
-  AssetCode,
-} from "aws-cdk-lib/aws-lambda";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 import {
   LambdaIntegration,
   RestApi,
@@ -43,15 +40,20 @@ export class CdkStack extends Stack {
       ],
     });
 
+    const catalogQueueUrl = Fn.importValue("CatalogQueueUrl");
+    const catalogQueueArn = Fn.importValue("CatalogQueueArn");
+    const catalogItemsQueue = Queue.fromQueueArn(this, "CatalogQueueImport", catalogQueueArn)
+
     // Lambda function for importing products
     const importProductsLambda = new NodejsFunction(this, 'ImportProductsFileFunction', {
       runtime: Runtime.NODEJS_20_X,
       entry: 'src/importProductsFile.ts',
       handler: 'handler',
       environment: {
-        BUCKET_NAME: importBucket.bucketName,
+        BUCKET_NAME: importBucket.bucketName
       },
     });
+
 
     // Lambda function for parsing imported files
     const importParserLambda = new NodejsFunction(this, 'ImportFileParserFunction', {
@@ -60,8 +62,11 @@ export class CdkStack extends Stack {
       handler: 'handler',
       environment: {
         BUCKET_NAME: importBucket.bucketName,
+        SQS_QUEUE_URL: catalogQueueUrl,
       },
     });
+
+    catalogItemsQueue.grantSendMessages(importParserLambda);
 
     // IAM policy for importing products lambda function
     const importProductsPolicy = new PolicyStatement({
@@ -74,7 +79,7 @@ export class CdkStack extends Stack {
     // IAM policy for import parser lambda function
     const importParserPolicy = new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
+      actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject', 's3:CopyObject'],
       resources: [importBucket.bucketArn + '/*'],
     });
     importParserLambda.addToRolePolicy(importParserPolicy);
@@ -88,6 +93,7 @@ export class CdkStack extends Stack {
         allowMethods: Cors.ALL_METHODS,
       },
     });
+
 
     // Define import resource and its methods
     const importResource = api.root.addResource('import');
