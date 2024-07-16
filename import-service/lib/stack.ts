@@ -2,15 +2,19 @@ import { Fn, Stack, StackProps } from 'aws-cdk-lib';
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Queue } from "aws-cdk-lib/aws-sqs";
 import { Construct } from 'constructs';
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, Function } from "aws-cdk-lib/aws-lambda";
 import {
   LambdaIntegration,
   RestApi,
   Cors,
+  TokenAuthorizer,
+  AuthorizationType
 } from "aws-cdk-lib/aws-apigateway";
 import {
   PolicyStatement,
   Effect,
+  Role,
+  ServicePrincipal
 } from 'aws-cdk-lib/aws-iam';
 import {
   Bucket,
@@ -94,11 +98,35 @@ export class CdkStack extends Stack {
       },
     });
 
+    const authorizerLambdaArn = Fn.importValue('BasicAuthorizerArn'); // Import the ARN from the Authorization service
+
+    const authorizerHandler = Function.fromFunctionArn(this, 'basicAuthorizer', authorizerLambdaArn)
+
+    const authorizerRole = new Role(this, 'authorizerRole', {
+      assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
+    });
+
+    authorizerRole.addToPolicy(
+        new PolicyStatement({
+          actions: ['lambda:InvokeFunction'],
+          resources: [authorizerHandler.functionArn],
+        }),
+    );
+
+    // Define authorizer
+    const authorizer = new TokenAuthorizer(this, 'Authorizer', {
+      handler: authorizerHandler,
+      assumeRole: authorizerRole
+    });
 
     // Define import resource and its methods
     const importResource = api.root.addResource('import');
-    importResource.addMethod('GET', new LambdaIntegration(importProductsLambda));
-
+    importResource.addMethod('GET', new LambdaIntegration(importProductsLambda), {
+      authorizer,
+      requestParameters: {
+        'method.request.header.Authorization': true,
+      },
+    });
     // S3 event notification for new object creation
     importBucket.addEventNotification(
       EventType.OBJECT_CREATED,
