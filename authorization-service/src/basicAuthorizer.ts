@@ -39,11 +39,13 @@ export const handler = async (event: APIGatewayTokenAuthorizerEvent): Promise<AP
   }
 
   const authToken = event.authorizationToken.split(' ')[1];
-  const [username] = Buffer.from(authToken, 'base64').toString('utf-8').split(':');
+  const [username, password] = Buffer.from(authToken, 'base64').toString('utf-8').split(':');
 
-  console.log(`Decoded username: ${username}`);
+  console.log(`Decoded username: ${username}:${password}`);
 
   const storedPassword = process.env[username];
+
+  console.log(`Decoded username: ${username}:${password}:${storedPassword}`);
 
   if (storedPassword && Buffer.from(authToken, 'base64').toString('utf-8') === `${username}:${storedPassword}`) {
     console.log(`User authorized: ${username}`);

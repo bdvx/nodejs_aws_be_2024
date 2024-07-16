@@ -13,6 +13,8 @@ import {
 import {
   PolicyStatement,
   Effect,
+  Role,
+  ServicePrincipal
 } from 'aws-cdk-lib/aws-iam';
 import {
   Bucket,
@@ -98,17 +100,32 @@ export class CdkStack extends Stack {
 
     const authorizerLambdaArn = Fn.importValue('BasicAuthorizerArn'); // Import the ARN from the Authorization service
 
+    const authorizerHandler = Function.fromFunctionArn(this, 'basicAuthorizer', authorizerLambdaArn)
+
+    const authorizerRole = new Role(this, 'authorizerRole', {
+      assumedBy: new ServicePrincipal('apigateway.amazonaws.com'),
+    });
+
+    authorizerRole.addToPolicy(
+        new PolicyStatement({
+          actions: ['lambda:InvokeFunction'],
+          resources: [authorizerHandler.functionArn],
+        }),
+    );
+
     // Define authorizer
     const authorizer = new TokenAuthorizer(this, 'Authorizer', {
-      handler: Function.fromFunctionArn(this, 'basicAuthorizer', authorizerLambdaArn),
-      identitySource: 'method.request.header.Authorization',
+      handler: authorizerHandler,
+      assumeRole: authorizerRole
     });
 
     // Define import resource and its methods
     const importResource = api.root.addResource('import');
     importResource.addMethod('GET', new LambdaIntegration(importProductsLambda), {
       authorizer,
-      authorizationType: AuthorizationType.CUSTOM,
+      requestParameters: {
+        'method.request.header.Authorization': true,
+      },
     });
     // S3 event notification for new object creation
     importBucket.addEventNotification(
